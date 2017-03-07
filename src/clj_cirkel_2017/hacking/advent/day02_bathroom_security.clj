@@ -67,63 +67,89 @@
 (ns advent-02
   (:use clojure.test))
 
-;; NOTE -- keypad layout's first element should be nil. Otherwise bad things can happen.
+(defn index-of
+  {:test #(do
+            (is (= 0 (index-of :a [:a :b :c :d])))
+            (is (= 1 (index-of :b [:a :b :c :d])))
+            (is (= 2 (index-of :c [:a :b :c :d])))
+            (is (= -1 (index-of :z [:a :b :c :d])))
+            )}
+  [e c]
+  (or (->> (range (count c))
+           (map vector c)
+           (filter (fn [[curr index]] (= e curr)))
+           (map #(% 1))
+           (first))
+      -1))
 
-(def mini-keypad {:layout      [nil 1 2 nil
-                                nil 3 4 nil]
-                  :line-length 4})
+(defn make-keypad
+  [initial-key rows]
+  {:initial-key initial-key
+   :line-length (first (map count rows))
+   :layout      (vec (apply concat rows))})
 
-(def square-keypad {:initial-key 5
-                    :line-length 5
-                    :layout      [nil 1 2 3 nil
-                                  nil 4 5 6 nil
-                                  nil 7 8 9 nil]})
+(def mini-keypad (make-keypad 1 [[1 2] [3 4]]))
 
-(def diamond-keypad {:initial-key 0x7
-                     :line-length 5
-                     :layout      [nil nil 0x1 nil nil
-                                   nil 0x2 0x3 0x4 nil
-                                   0x5 0x6 0x7 0x8 0x9
-                                   nil 0xA 0xB 0xC nil
-                                   nil nil 0xD nil nil]})
+(def square-keypad (make-keypad 5 [[1 2 3]
+                                   [4 5 6]
+                                   [7 8 9]]))
+
+(def diamond-keypad (make-keypad 0x7 [[nil nil 0x1 nil nil]
+                                      [nil 0x2 0x3 0x4 nil]
+                                      [0x5 0x6 0x7 0x8 0x9]
+                                      [nil 0xA 0xB 0xC nil]
+                                      [nil nil 0xD nil nil]]))
 
 (defn keypad-try-advance
   {:test #(do
             ; Up
             (is (= 1 (keypad-try-advance mini-keypad 1 \U)))
+            (is (= 2 (keypad-try-advance mini-keypad 2 \U)))
             (is (= 1 (keypad-try-advance mini-keypad 3 \U)))
+            (is (= 2 (keypad-try-advance mini-keypad 4 \U)))
             ; Down
+            (is (= 3 (keypad-try-advance mini-keypad 1 \D)))
             (is (= 4 (keypad-try-advance mini-keypad 2 \D)))
+            (is (= 3 (keypad-try-advance mini-keypad 3 \D)))
             (is (= 4 (keypad-try-advance mini-keypad 4 \D)))
             ; Left
-            (is (= 1 (keypad-try-advance mini-keypad 2 \L)))
             (is (= 1 (keypad-try-advance mini-keypad 1 \L)))
+            (is (= 1 (keypad-try-advance mini-keypad 2 \L)))
+            (is (= 3 (keypad-try-advance mini-keypad 3 \L)))
+            (is (= 3 (keypad-try-advance mini-keypad 4 \L)))
             ; Right
+            (is (= 2 (keypad-try-advance mini-keypad 1 \R)))
+            (is (= 2 (keypad-try-advance mini-keypad 2 \R)))
             (is (= 4 (keypad-try-advance mini-keypad 3 \R)))
             (is (= 4 (keypad-try-advance mini-keypad 4 \R)))
+            ; Don't step into nil territory
+            (is (= 1 (keypad-try-advance (make-keypad 1 [[1 nil]]) 1 \R)))
             )}
   [{:keys [layout line-length]} from-key ch]
-  (let [from-key-index (.indexOf layout from-key)
-        max-index (dec (count layout))]
-    (or (layout
-          (case ch
-            \U (max 0 (- from-key-index line-length))
-            \D (min max-index (+ from-key-index line-length))
-            \L (max 0 (dec from-key-index))
-            \R (min max-index (inc from-key-index))))
-        from-key)))
+  (let [from-key-index (index-of from-key layout)
+        tentative-to-key-index (case ch
+                                 \U (- from-key-index line-length)
+                                 \D (+ from-key-index line-length)
+                                 \L (if (= 0 (mod from-key-index line-length))
+                                      from-key-index
+                                      (dec from-key-index))
+                                 \R (if (= (dec line-length) (mod from-key-index line-length))
+                                      from-key-index
+                                      (inc from-key-index)
+                                      ))]
+    (if-not (< -1 tentative-to-key-index (count layout))
+      from-key
+      (or (layout tentative-to-key-index) from-key))))
 
 (defn keypad-translate-line
-  {:test #(do (let [kp {:layout      [nil 1 2 nil
-                                      nil 3 4 nil]
-                        :line-length 4}]
-                (is (= 4 (keypad-translate-line mini-keypad 4 "")))
-                (is (= 1 (keypad-translate-line mini-keypad 2 "LL")))
-                (is (= 4 (keypad-translate-line mini-keypad 1 "DR")))
-                (is (= 3 (keypad-translate-line mini-keypad 2 "DLL")))
-                (is (= 1 (keypad-translate-line mini-keypad 4 "UL")))
-                (is (= 5 (keypad-translate-line square-keypad 2 "UD")))
-                ))}
+  {:test #(do
+            (is (= 4 (keypad-translate-line mini-keypad 4 "")))
+            (is (= 1 (keypad-translate-line mini-keypad 2 "LL")))
+            (is (= 4 (keypad-translate-line mini-keypad 1 "DR")))
+            (is (= 3 (keypad-translate-line mini-keypad 2 "DLL")))
+            (is (= 1 (keypad-translate-line mini-keypad 4 "UL")))
+            (is (= 5 (keypad-translate-line square-keypad 2 "UD")))
+            )}
   [keypad start-pos line]
   (reduce #(keypad-try-advance keypad %1 %2) start-pos line))
 
