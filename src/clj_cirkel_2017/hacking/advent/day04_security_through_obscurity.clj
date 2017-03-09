@@ -22,10 +22,26 @@
 ; Of the real rooms from the list above, the sum of their sector IDs is 1514.
 ;
 ; What is the sum of the sector IDs of the real rooms?
-
+;
+; --- Part Two ---
+;
+; With all the decoy data out of the way, it's time to decrypt this list and get moving.
+;
+; The room names are encrypted by a state-of-the-art shift cipher, which is nearly unbreakable without the right
+; software. However, the information kiosk designers at Easter Bunny HQ were not expecting to deal with a master
+; cryptographer like yourself.
+;
+; To decrypt a room name, rotate each letter forward through the alphabet a number of times equal to the room's sector
+; ID. A becomes B, B becomes C, Z becomes A, and so on. Dashes become spaces.
+;
+; For example, the real name for qzmt-zixmtkozy-ivhz-343 is very encrypted name.
+;
+; What is the sector ID of the room where North Pole objects are stored?
+;
 
 (ns advent-04
-  (:use clojure.test))
+  (:use clojure.test)
+  (:require [clojure.string :as strings]))
 
 (defn easter-bunny-checksum
   {:test #(do
@@ -43,7 +59,7 @@
                                        (compare k1 k2)))))
        (take 5)
        (map first)
-       (clojure.string/join)
+       (strings/join)
        ))
 
 (defn parse-room
@@ -74,9 +90,36 @@
        (reduce + 0))
   )
 
+(defn rot-char
+  {:test #(do
+            (is (= \a (rot-char \a 0)))
+            (is (= \b (rot-char \a 1)))
+            (is (= \a (rot-char \a 26)))
+            (is (= \a (rot-char \a (* 2 26))))
+            (is (= \z (rot-char \z 0)))
+            (is (= \a (rot-char \z 1)))
+            (is (= \a (rot-char \z 1)))
+            (is (= \z (rot-char \z 26)))
+            (is (= \z (rot-char \z (* 2 26))))
+            )}
+  [ch rotations]
+  (char
+    (+ (int \a)
+       (mod (- (+ (int ch) rotations) (int \a))
+            (- (int \z) (int \a) -1)))))
+
+(defn decrypt-room-name
+  {:test #(do
+            (is (= "very encrypted name" (decrypt-room-name (parse-room "qzmt-zixmtkozy-ivhz-343[zimth]"))))
+            )}
+  [{:keys [encrypted-name sector-id]}]
+  (join (map (fn [ch] (if (= \- ch) \space
+                              (rot-char ch sector-id)))
+       encrypted-name)))
+
 (def input (->> (clojure.java.io/file "./resources/advent/day04_rooms.txt")
                 (slurp)
-                (clojure.string/split-lines)
+                (strings/split-lines)
                 (map parse-room)
                 ))
 
@@ -85,4 +128,14 @@
   []
   (sum-of-non-decoy-room-sectors input))
 
+(defn solve-part-2
+  {:test #(do
+            (is (= {:encrypted-name "kloqemlib-lygbzq-pqloxdb", :sector-id 991, :checksum "lbqod"}
+                   (solve-part-2))))}
+  []
+  (->> (filter #(not (decoy? %)) input)
+       (filter #(= "northpole object storage" (decrypt-room-name %)))
+       (first)))
+
 (prn "Part 1: " (solve-part-1))
+(prn "Part 2: " (solve-part-2))
