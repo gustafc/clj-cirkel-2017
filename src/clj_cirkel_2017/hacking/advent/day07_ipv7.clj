@@ -38,30 +38,41 @@
        (some (fn [[_ one two]] (not= one two)))
        ))
 
-(defn supports-tls?
+(defn parse-ipv7
   {:test #(do
-            (is (supports-tls? "abba[mnop]qrst"))
-            (is (not (supports-tls? "abcd[bddb]xyyx")))
-            (is (not (supports-tls? "sqqs[bddb]xzyx")))
-            (is (not (supports-tls? "aaaa[qwer]tyui")))
-            (is (supports-tls? "ioxxoj[asdfgh]zxcvbn"))
-            (is (supports-tls? "ioxzoj[asdfgh]zxcvbn[data]baab"))
-            (is (not (supports-tls? "ioxzoj[asdfgh]zxcvbn[datta]baab")))
+            (is (= {:supernet ["abc" "def"] :hypernet ["ghi" "jkl"]}
+                   (parse-ipv7 "abc[ghi]def[jkl]")))
+            (is (= {:supernet ["abc" "def" "xyz"] :hypernet ["ghi" "jkl"]}
+                   (parse-ipv7 "abc[ghi]def[jkl]xyz")))
             )}
   [addr]
-  (let [evidence (->> addr
-                      (re-seq #"(^|\[|\])([a-z]+)")
-                      (map (fn [[_ hnet part]] (cond (= "[" hnet) (if (is-abba? part) false :maybe)
-                                                     (is-abba? part) true
-                                                     :else :maybe)))
-                      (filter #(not= :maybe %))
-                      )]
-    (and (not-empty evidence) (every? identity evidence))
+  (->> (re-seq #"(^|\[|\])([a-z]+)" addr)
+       (reduce (fn [addr-now [_ hyper-or-super content]]
+                 (update addr-now (if (= "[" hyper-or-super) :hypernet :supernet) #(conj % content))
+                 )
+               {:supernet [] :hypernet []})
+       ))
+
+(defn supports-tls?
+  {:test #(do
+            (is (supports-tls? (parse-ipv7 "abba[mnop]qrst")))
+            (is (not (supports-tls? (parse-ipv7 "abcd[bddb]xyyx"))))
+            (is (not (supports-tls? (parse-ipv7 "sqqs[bddb]xzyx"))))
+            (is (not (supports-tls? (parse-ipv7 "aaaa[qwer]tyui"))))
+            (is (supports-tls? (parse-ipv7 "ioxxoj[asdfgh]zxcvbn")))
+            (is (supports-tls? (parse-ipv7 "ioxzoj[asdfgh]zxcvbn[data]baab")))
+            (is (not (supports-tls? (parse-ipv7 "ioxzoj[asdfgh]zxcvbn[datta]baab"))))
+            )}
+  [{:keys [supernet hypernet]}]
+  (and
+    (not-any? is-abba? hypernet)
+    (some is-abba? supernet)
     ))
 
 (def input (->> (clojure.java.io/file "./resources/advent/day07_ip_addrs.txt")
                 (slurp)
                 (strings/split-lines)
+                (map parse-ipv7)
                 ))
 
 (defn solve-part-1
