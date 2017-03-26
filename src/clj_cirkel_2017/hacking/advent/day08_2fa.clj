@@ -253,16 +253,14 @@
                 (strings/split-lines)
                 ))
 
+(def finished-display (execute-ops (make-display 50 6) input))
+
 (defn solve-part-1
   {:test #(is (= 115 (solve-part-1)))}
   []
-  (count-lit-display-pixels (execute-ops (make-display 50 6) input)))
+  (count-lit-display-pixels finished-display))
 
 (defn solve-part-2
-  {:test #(is (= "FIXME" (solve-part-2)))}
+  {:test #(is (not= "EFEYKFRFIJ" (solve-part-2)))}          ; Easier just to read the damn thing!
   []
-  "FIXME")
-
-
-;(prn "Part 1: " (solve-part-1))
-;(prn "Part 2: " (solve-part-2))
+  (render-display finished-display))
