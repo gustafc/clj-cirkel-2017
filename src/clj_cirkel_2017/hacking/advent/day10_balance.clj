@@ -36,6 +36,11 @@
 ;
 ; Based on your instructions, what is the number of the bot that is responsible for comparing value-61 microchips with
 ; value-17 microchips?
+;
+; --- Part Two ---
+;
+; What do you get if you multiply together the values of one chip in each of outputs 0, 1, and 2?
+
 
 
 (ns advent-10
@@ -107,17 +112,34 @@
     )
   )
 
+(defn run-bot-board [board] (iterate update-one-bot board))
+
 (defn bot-responsible-for-comparing
   {:test #(is (= 2
                  (bot-responsible-for-comparing parsed-example-input 2 5)))}
   [board n1 n2]
-  (->> (iterate update-one-bot board)
-
+  (->> (run-bot-board board)
        (mapcat (fn [board] (->> (board :bot)
-                                (filter (fn [[_ bot]] (every? (bot :values) [n1 n2])))
+                                (filter (fn [[_ bot]] (sets/superset? (bot :values) [n1 n2])))
                                 (map first)
                                 )))
        (first))
+  )
+
+(defn values-in-outputs
+  {:test #(do
+            (is (= #{2 3 5}
+                   (values-in-outputs parsed-example-input #{0 1 2})))
+            )}
+  [board output-ids]
+  (->> (run-bot-board board)
+       (drop-while (fn [board] (not (sets/superset? (set (keys (board :output))) output-ids))))
+       (first)
+       (:output)
+       (mapcat (fn [[id {:keys [values]}]]
+                 (if-not (output-ids id) []
+                                         values)))
+       (set))
   )
 
 (def input (->> (clojure.java.io/file "./resources/advent/day10_bots.txt")
@@ -128,13 +150,12 @@
 (defn solve-part-1
   {:test #(is (= 147 (solve-part-1)))}
   []
-  (bot-responsible-for-comparing input 61 17)
-  )
+  (bot-responsible-for-comparing input 61 17))
 
 (defn solve-part-2
-  {:test #(is (= "TODO" (solve-part-2)))}
+  {:test #(is (= 55637 (solve-part-2)))}
   []
-  "TODO")
+  (apply * (values-in-outputs input #{0 1 2})))
 
 (println "Part 1:" (solve-part-1))
 (println "Part 2:" (solve-part-2))
