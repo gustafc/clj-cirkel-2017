@@ -1,6 +1,8 @@
 (ns xtree
   (:use clojure.test))
 
+(declare xt-conj)
+
 (defn make-xt [& args] (reduce (fn [xt v] (xt-conj v xt)) nil args))
 
 (defn xt-conj
