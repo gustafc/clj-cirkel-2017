@@ -174,9 +174,9 @@
 
 (defn make-layout
   ([on-floor floors] (make-layout on-floor floors (->> (map vector (range) floors)
-                                                     (filter (fn [[n f]] (not (empty? f))))
-                                                     (first)
-                                                     (first))))
+                                                       (filter (fn [[n f]] (not (empty? f))))
+                                                       (first)
+                                                       (first))))
   ([on-floor floors first-occupied-floor]
    {:on-floor             on-floor
     :floors               floors
@@ -341,26 +341,17 @@
 
 (defn generate-permutations
   {:test #(letfn [(successors [s] [(str s "a") (str s "b")])]
-            (is (= [[""]] (take 1 (generate-permutations "" successors))))
-            (is (= [[""] ["" "a"] ["" "b"]]
+            (is (= [""] (take 1 (generate-permutations "" successors))))
+            (is (= ["" "a" "b"]
                    (take 3 (generate-permutations "" successors))))
-            (is (= [[""]
-                    ["" "a"] ["" "b"]
-                    ["" "a" "aa"] ["" "a" "ab"]
-                    ["" "b" "ba"] ["" "b" "bb"]]
+            (is (= ["" "a" "b" "aa" "ab" "ba" "bb"]
                    (take 7 (generate-permutations "" successors))))
             )}
   [initial-state get-successors]
-  (letfn [(unfold-more [path-so-far steps-remaining]
-            (if (< steps-remaining 1)
-              [path-so-far]
-              (->> (get-successors (peek path-so-far))
-                   (mapcat #(unfold-more (conj path-so-far %) (dec steps-remaining)))
-                   )))
-          (generate-at-depth [depth]
-            (lazy-cat (unfold-more [initial-state] (dec depth))
-                      (generate-at-depth (inc depth))))]
-    (generate-at-depth 1)
+  (letfn [(generate [expanded]
+            (lazy-cat expanded
+                      (generate (mapcat get-successors expanded))))]
+    (generate [initial-state])
     ))
 
 (defn everything-on-top-floor?
@@ -377,7 +368,11 @@
             (is (= 11 (time (count-steps-to-get-everything-to-top-floor (first example-layouts)))))
             )}
   [first-layout]
-  (->> (generate-permutations first-layout successive-layouts)
+  (->> (generate-permutations [first-layout]
+                              (fn [path]
+                                (->> (successive-layouts (peek path))
+                                     (map #(conj path %)))))
+       (take-while #(< (count %) 13))
        (filter (comp everything-on-top-floor? last))
        (first)
        (count)
