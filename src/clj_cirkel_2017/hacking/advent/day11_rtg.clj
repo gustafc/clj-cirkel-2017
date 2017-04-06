@@ -368,12 +368,11 @@
             (is (= 11 (time (count-steps-to-get-everything-to-top-floor (first example-layouts)))))
             )}
   [first-layout]
-  (->> (generate-permutations [first-layout]
+  (->> (generate-permutations (list first-layout)
                               (fn [path]
                                 (->> (successive-layouts (peek path))
                                      (map #(conj path %)))))
-       (take-while #(< (count %) 13))
-       (filter (comp everything-on-top-floor? last))
+       (filter (comp everything-on-top-floor? peek))
        (first)
        (count)
        (dec))
