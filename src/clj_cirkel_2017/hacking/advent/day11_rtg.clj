@@ -172,18 +172,30 @@
                             "F4 E  HG HM LG LM \nF3 .  .  .  .  .  \nF2 .  .  .  .  .  \nF1 .  .  .  .  .  "
                             ])
 
+(defn make-layout
+  ([on-floor floors] (make-layout on-floor floors (->> (map vector (range) floors)
+                                                     (filter (fn [[n f]] (not (empty? f))))
+                                                     (first)
+                                                     (first))))
+  ([on-floor floors first-occupied-floor]
+   {:on-floor             on-floor
+    :floors               floors
+    :first-occupied-floor first-occupied-floor})
+  )
+
 (defn parse-example-layout
-  {:test #(do (is (= {:on-floor 0
-                      :floors   [; The first floor contains a hydrogen-compatible microchip and a lithium-compatible
-                                 ; microchip.
-                                 #{[:hydrogen :chip] [:lithium :chip]}
-                                 ; The second floor contains a hydrogen generator.
-                                 #{[:hydrogen :generator]}
-                                 ; The third floor contains a lithium generator.
-                                 #{[:lithium :generator]}
-                                 ; The fourth floor contains nothing relevant.
-                                 #{}
-                                 ]}
+  {:test #(do (is (= {:on-floor             0
+                      :first-occupied-floor 0
+                      :floors               [; The first floor contains a hydrogen-compatible microchip and a lithium-compatible
+                                             ; microchip.
+                                             #{[:hydrogen :chip] [:lithium :chip]}
+                                             ; The second floor contains a hydrogen generator.
+                                             #{[:hydrogen :generator]}
+                                             ; The third floor contains a lithium generator.
+                                             #{[:lithium :generator]}
+                                             ; The fourth floor contains nothing relevant.
+                                             #{}
+                                             ]}
                      (parse-example-layout (example-layout-inputs 0)))))}
   [s]
   (let [parsed-floors (->> (strings/split-lines s)
@@ -200,10 +212,10 @@
                                    })
                                 (range))
                            )]
-    {:on-floor (->> (filter :has-elevator parsed-floors)
-                    (map :floor-number)
-                    (first))
-     :floors   (vec (map :items parsed-floors))}
+    (make-layout (->> (filter :has-elevator parsed-floors)
+                      (map :floor-number)
+                      (first))
+                 (vec (map :items parsed-floors)))
     ))
 
 (def example-layouts (map parse-example-layout example-layout-inputs))
@@ -293,16 +305,35 @@
   {:test #(do
             (is (contains? (set (successive-layouts (nth example-layouts 0))) (nth example-layouts 1)))
             (is (contains? (set (successive-layouts (nth example-layouts 1))) (nth example-layouts 2)))
+            (is (contains? (set (successive-layouts (nth example-layouts 2))) (nth example-layouts 3)))
+            (is (contains? (set (successive-layouts (nth example-layouts 3))) (nth example-layouts 4)))
+            (is (contains? (set (successive-layouts (nth example-layouts 4))) (nth example-layouts 5)))
+            (is (contains? (set (successive-layouts (nth example-layouts 5))) (nth example-layouts 6)))
+            (is (contains? (set (successive-layouts (nth example-layouts 6))) (nth example-layouts 7)))
+            (is (contains? (set (successive-layouts (nth example-layouts 7))) (nth example-layouts 8)))
+            (is (contains? (set (successive-layouts (nth example-layouts 8))) (nth example-layouts 9)))
+            (is (contains? (set (successive-layouts (nth example-layouts 9))) (nth example-layouts 10)))
+            (is (contains? (set (successive-layouts (nth example-layouts 10))) (nth example-layouts 11)))
+            (is (= []                                       ; Never move down below first occupied floor
+                   (->> (successive-layouts (nth example-layouts 5))
+                        (filter (fn [successor] (not (empty? (get-in successor [:floors 0])))))
+                        )))
             )}
-  [{:keys [on-floor floors] :as layout}]
+  [{:keys [on-floor first-occupied-floor floors] :as layout}]
   (letfn [(make-moves [to-floor]
-            (if-not (< -1 to-floor (count floors))
+            (if-not (< (dec first-occupied-floor) to-floor (count floors))
               []
               (->> (possible-moves (floors on-floor) (floors to-floor))
-                   (map (fn [[src dst]] {:on-floor to-floor
-                                         :floors   (assoc floors on-floor src to-floor dst)})))
+                   (map (fn [[src dst]] (make-layout
+                                          to-floor
+                                          (assoc floors on-floor src to-floor dst)
+                                          (if (and (= first-occupied-floor on-floor)
+                                                   (empty? src))
+                                            to-floor        ; src is emptied, dst becomes first occupied floor
+                                            first-occupied-floor
+                                            )))))
               ))]
-    (lazy-cat
+    (concat
       (make-moves (inc on-floor))
       (make-moves (dec on-floor))
       ))
@@ -347,7 +378,7 @@
             )}
   [first-layout]
   (->> (generate-permutations first-layout successive-layouts)
-       (filter #(everything-on-top-floor? (last %)))
+       (filter (comp everything-on-top-floor? last))
        (first)
        (count)
        (dec))
@@ -355,26 +386,26 @@
 
 
 (def puzzle-input
-  {:on-floor 0
-   :floors   [; The first floor contains a strontium generator, a strontium-compatible microchip, a plutonium generator,
-              ; and a plutonium-compatible microchip.
-              (mk-floor :strontium :generator
-                        :strontium :chip
-                        :plutonium :generator
-                        :plutonium :chip)
-              ; The second floor contains a thulium generator, a ruthenium generator, a ruthenium-compatible microchip,
-              ; a curium generator, and a curium-compatible microchip.
-              (mk-floor :thulium :generator
-                        :ruthenium :generator
-                        :ruthenium :chip
-                        :curium :generator
-                        :curium :chip)
-              ; The third floor contains a thulium-compatible microchip.
-              (mk-floor :thulium :chip)
-              ; The fourth floor contains nothing relevant.
-              empty-floor
-              ]
-   })
+  (make-layout 0
+               [; The first floor contains a strontium generator, a strontium-compatible microchip, a
+                ; plutonium generator, and a plutonium-compatible microchip.
+                (mk-floor :strontium :generator
+                          :strontium :chip
+                          :plutonium :generator
+                          :plutonium :chip)
+                ; The second floor contains a thulium generator, a ruthenium generator, a ruthenium-compatible
+                ; microchip, a curium generator, and a curium-compatible microchip.
+                (mk-floor :thulium :generator
+                          :ruthenium :generator
+                          :ruthenium :chip
+                          :curium :generator
+                          :curium :chip)
+                ; The third floor contains a thulium-compatible microchip.
+                (mk-floor :thulium :chip)
+                ; The fourth floor contains nothing relevant.
+                empty-floor
+                ]
+               ))
 
 (defn solve-part-1
   {:test #(is (= "FIXME" (solve-part-1)))}
