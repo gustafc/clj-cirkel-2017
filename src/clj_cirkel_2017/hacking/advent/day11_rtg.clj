@@ -339,13 +339,13 @@
       ))
   )
 
-(defn generate-permutations
+(defn traverse-breadth-first
   {:test #(letfn [(successors [s] [(str s "a") (str s "b")])]
-            (is (= [""] (take 1 (generate-permutations "" successors))))
+            (is (= [""] (take 1 (traverse-breadth-first "" successors))))
             (is (= ["" "a" "b"]
-                   (take 3 (generate-permutations "" successors))))
+                   (take 3 (traverse-breadth-first "" successors))))
             (is (= ["" "a" "b" "aa" "ab" "ba" "bb"]
-                   (take 7 (generate-permutations "" successors))))
+                   (take 7 (traverse-breadth-first "" successors))))
             )}
   [initial-state get-successors]
   (letfn [(generate [expanded]
@@ -368,10 +368,11 @@
             (is (= 11 (time (count-steps-to-get-everything-to-top-floor (first example-layouts)))))
             )}
   [first-layout]
-  (->> (generate-permutations (list first-layout)
-                              (fn [path]
-                                (->> (successive-layouts (peek path))
-                                     (map #(conj path %)))))
+  (->> (traverse-breadth-first (list first-layout)
+                               (fn [path]
+                                 (->> (successive-layouts (peek path))
+                                      (filter #(not-any? (partial = %) path))
+                                      (map #(conj path %)))))
        (filter (comp everything-on-top-floor? peek))
        (first)
        (count)
