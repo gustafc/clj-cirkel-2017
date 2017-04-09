@@ -261,22 +261,20 @@
 
 (defn items-for-elevator
   {:test #(do
-            (is (= [[[:x :generator]]
-                    [[:y :generator]]
-                    [[:x :chip]]
-                    [[:x :generator] [:y :generator]]
-                    [[:x :generator] [:x :chip]]
-                    ; This last pair is a little unclear if it's legal, but since the elevator's "capacity rating means
-                    ; it can carry at most yourself and two RTGs or microchips in any combination" seems to imply that
-                    ; things don't fry each other in the elevator.
-                    [[:y :generator] [:x :chip]]
-                    ]
-                   (items-for-elevator [[:x :generator] [:y :generator] [:x :chip]])))
+            (is (= #{[[:x :generator]]
+                     [[:y :generator]]
+                     [[:x :chip]]
+                     [[:x :generator] [:y :generator]]
+                     [[:x :generator] [:x :chip]]
+                     ; This last pair is a little unclear if it's legal, but since the elevator's "capacity rating means
+                     ; it can carry at most yourself and two RTGs or microchips in any combination" seems to imply that
+                     ; things don't fry each other in the elevator.
+                     [[:y :generator] [:x :chip]]}
+                   (set (items-for-elevator [[:x :generator] [:y :generator] [:x :chip]]))))
             )}
   [items-on-floor]
-  (lazy-cat (map vector items-on-floor)
-            ; Or should it be: (filter nothing-gets-fried? (successive-pairs items-on-floor))
-            (successive-pairs items-on-floor))
+  (lazy-cat (successive-pairs items-on-floor) ; Or should it be: (filter nothing-gets-fried? (successive-pairs items-on-floor))
+            (map vector items-on-floor))
   )
 
 (defn possible-moves
