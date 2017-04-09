@@ -273,7 +273,7 @@
                    (set (items-for-elevator [[:x :generator] [:y :generator] [:x :chip]]))))
             )}
   [items-on-floor]
-  (lazy-cat (successive-pairs items-on-floor) ; Or should it be: (filter nothing-gets-fried? (successive-pairs items-on-floor))
+  (lazy-cat (successive-pairs items-on-floor)               ; Or should it be: (filter nothing-gets-fried? (successive-pairs items-on-floor))
             (map vector items-on-floor))
   )
 
@@ -338,18 +338,34 @@
   )
 
 (defn traverse-breadth-first
-  {:test #(letfn [(successors [s] [(str s "a") (str s "b")])]
-            (is (= [""] (take 1 (traverse-breadth-first "" successors))))
-            (is (= ["" "a" "b"]
+  {:test #(letfn [(successors [path] (map (partial str (peek path)) ["a" "b" "a"]))]
+            (is (= [[""]] (take 1 (traverse-breadth-first "" successors))))
+            (is (= [[""] ["" "a"] ["" "b"]]
                    (take 3 (traverse-breadth-first "" successors))))
-            (is (= ["" "a" "b" "aa" "ab" "ba" "bb"]
+            (is (= [[""]
+                    ["" "a"] ["" "b"]
+                    ["" "a" "aa"] ["" "a" "ab"]
+                    ["" "b" "ba"] ["" "b" "bb"]
+                    ]
                    (take 7 (traverse-breadth-first "" successors))))
             )}
   [initial-state get-successors]
-  (letfn [(generate [expanded]
-            (lazy-cat expanded
-                      (generate (mapcat get-successors expanded))))]
-    (generate [initial-state])
+  (letfn [(generate [paths emitted]
+            (let [[emitted paths] (reduce (fn [[emitted paths] current-path]
+                                            (let [emitted-with-current (conj emitted (peek current-path))]
+                                              [emitted-with-current
+                                               (if (identical? emitted emitted-with-current)
+                                                 paths
+                                                 (conj paths current-path)
+                                                 )]
+                                              )) [emitted []] paths)]
+              (lazy-cat paths
+                        (generate (mapcat (fn [path]
+                                            (map #(conj path %) (get-successors path)))
+                                          paths)
+                                  emitted)))
+            )]
+    (generate [[initial-state]] #{})
     ))
 
 (defn everything-on-top-floor?
@@ -361,16 +377,14 @@
   (every? empty? (butlast (:floors layout)))
   )
 
+(def successive-layouts-to-path (comp successive-layouts peek))
+
 (defn count-steps-to-get-everything-to-top-floor
   {:test #(do
             (is (= 11 (time (count-steps-to-get-everything-to-top-floor (first example-layouts)))))
             )}
   [first-layout]
-  (->> (traverse-breadth-first (list first-layout)
-                               (fn [path]
-                                 (->> (successive-layouts (peek path))
-                                      (filter #(not-any? (partial = %) path))
-                                      (map #(conj path %)))))
+  (->> (traverse-breadth-first first-layout successive-layouts-to-path)
        (filter (comp everything-on-top-floor? peek))
        (first)
        (count)
@@ -401,10 +415,10 @@
                ))
 
 (defn solve-part-1
-  {:test #(is (= "FIXME" (solve-part-1)))}
+  {:test #(is (= 37 (solve-part-1)))}
   []
-  "FIXME"
-  ;(count-steps-to-get-everything-to-top-floor puzzle-input)
+  (println "Solving part 1...")
+  (time (count-steps-to-get-everything-to-top-floor puzzle-input))
   )
 
 (defn solve-part-2
