@@ -51,12 +51,12 @@
   (:require [clojure.string :as strings])
   (:require [clojure.set :as sets]))
 
-(def initial-state {:program-counter 0 :a 0 :b 0 :c 0 :d 0})
+(def zero-state {:program-counter 0 :a 0 :b 0 :c 0 :d 0})
 
 (defn step-program-counter
   {:test #(do
-            (is (= 1 (:program-counter (step-program-counter initial-state))))
-            (is (= 13 (:program-counter (step-program-counter 13 initial-state))))
+            (is (= 1 (:program-counter (step-program-counter zero-state))))
+            (is (= 13 (:program-counter (step-program-counter 13 zero-state))))
             )}
   ([state] (step-program-counter 1 state))
   ([jump state] (update state :program-counter (partial + jump)))
@@ -65,9 +65,9 @@
 (defn op-inc
   {:test #(do
             (is (= {:program-counter 1 :a 1 :b 0 :c 0 :d 0}
-                   (op-inc :a initial-state)))
+                   (op-inc :a zero-state)))
             (is (= {:program-counter 2 :a 0 :b 0 :c 0 :d 2}
-                   (op-inc :d (op-inc :d initial-state))))
+                   (op-inc :d (op-inc :d zero-state))))
             )}
   [reg state]
   (->> (update state reg inc)
@@ -77,9 +77,9 @@
 (defn op-dec
   {:test #(do
             (is (= {:program-counter 1 :a 0 :b -1 :c 0 :d 0}
-                   (op-dec :b initial-state)))
+                   (op-dec :b zero-state)))
             (is (= {:program-counter 2 :a 0 :b 0 :c -2 :d 0}
-                   (op-dec :c (op-dec :c initial-state))))
+                   (op-dec :c (op-dec :c zero-state))))
             )}
   [reg state]
   (->> (update state reg dec)
@@ -94,9 +94,9 @@
 (defn op-cpy
   {:test #(do
             (is (= {:program-counter 1 :a 0 :b 42 :c 0 :d 0}
-                   (op-cpy 42 :b initial-state)))
+                   (op-cpy 42 :b zero-state)))
             (is (= {:program-counter 2 :a 0 :b 13 :c 13 :d 0}
-                   (op-cpy :b :c (op-cpy 13 :b initial-state))))
+                   (op-cpy :b :c (op-cpy 13 :b zero-state))))
             )}
   [src dst state]
   (->> (read-register-or-constant src state)
@@ -107,14 +107,14 @@
   {:test #(do
             ; op1 is register
             (is (= {:program-counter 1 :a 0 :b 0 :c 0 :d 0}
-                   (op-jnz :b 42 initial-state)))
+                   (op-jnz :b 42 zero-state)))
             (is (= {:program-counter 43 :a 0 :b 0 :c 1 :d 0}
-                   (op-jnz :c 42 (op-inc :c initial-state))))
+                   (op-jnz :c 42 (op-inc :c zero-state))))
             ; op1 is number
             (is (= {:program-counter 1 :a 0 :b 0 :c 0 :d 0}
-                   (op-jnz 0 42 initial-state)))
+                   (op-jnz 0 42 zero-state)))
             (is (= {:program-counter 42 :a 0 :b 0 :c 0 :d 0}
-                   (op-jnz 1 42 initial-state)))
+                   (op-jnz 1 42 zero-state)))
             )}
   [operand jump state]
   (if (= 0 (read-register-or-constant operand state))
@@ -137,7 +137,7 @@
 
 (defn execute-assembunny
   {:test #(do
-            (is (= [initial-state
+            (is (= [zero-state
                     {:program-counter 1 :a 41 :b 0 :c 0 :d 0} ; cpy
                     {:program-counter 2 :a 42 :b 0 :c 0 :d 0} ; inc
                     {:program-counter 3 :a 43 :b 0 :c 0 :d 0} ; inc
@@ -150,10 +150,10 @@
                       (partial op-inc :a)
                       (partial op-dec :a)
                       (partial op-jnz :a 2)
-                      (partial op-dec :a)
-                      ])))
+                      (partial op-dec :a)]
+                     zero-state)))
             )}
-  [ops]
+  [ops initial-state]
   (->> initial-state
        (iterate (fn [{:keys [program-counter] :as state}]
                   ((ops program-counter) state)))
@@ -167,12 +167,10 @@ dec a
 jnz a 2
 dec a")
 
-(declare eval-assembunny)
-
 (defn compile-assembunny
   {:test #(do
             (is (= {:program-counter 6 :a 42 :b 0 :c 0 :d 0}
-                   (last (eval-assembunny example-input))))
+                   (last (execute-assembunny (compile-assembunny example-input) zero-state))))
             )}
   [code]
   (->> (strings/split-lines code)
@@ -195,9 +193,6 @@ dec a")
                  "jnz" (partial op-jnz (parse-register-or-number o1) (read-string o2))
                  )))
        (vec)))
-
-(def eval-assembunny
-  (comp execute-assembunny compile-assembunny))
 
 (def puzzle-input "cpy 1 a
 cpy 1 b
@@ -224,6 +219,8 @@ dec c
 jnz c -5
 ")
 
+(def compiled-input (compile-assembunny puzzle-input))
+
 
 (defn solve-part-1
   {:test #(is (= {:a               318077
@@ -233,6 +230,17 @@ jnz c -5
                   :program-counter 23}
                  (solve-part-1)))}
   []
-  (->> (eval-assembunny puzzle-input)
+  (->> (execute-assembunny compiled-input zero-state)
        (last)))
 
+
+(defn solve-part-2
+  {:test #(is (= {:a               9227731
+                  :b               5702887
+                  :c               0
+                  :d               0
+                  :program-counter 23}
+                 (time (solve-part-2))))}
+  []
+  (->> (execute-assembunny compiled-input (assoc zero-state :c 1))
+       (last)))
