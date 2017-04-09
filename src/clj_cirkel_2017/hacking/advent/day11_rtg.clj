@@ -139,8 +139,24 @@
 ; stop counts as one step, even if nothing is added to or removed from it.)
 ;
 ; In your situation, what is the minimum number of steps required to bring all of the objects to the fourth floor?
-
-
+;
+; --- Part Two ---
+;
+; You step into the cleanroom separating the lobby from the isolated area and put on the hazmat suit.
+;
+; Upon entering the isolated containment area, however, you notice some extra parts on the first floor that weren't
+; listed on the record outside:
+;
+; An elerium generator.
+; An elerium-compatible microchip.
+; A dilithium generator.
+; A dilithium-compatible microchip.
+;
+; These work just like the other generators and microchips. You'll have to get them up to assembly as well.
+;
+; What is the minimum number of steps required to bring all of the objects, including these four new ones, to the fourth
+; floor?
+;
 
 
 (ns advent-11
@@ -351,6 +367,7 @@
             )}
   [initial-state get-successors]
   (letfn [(generate [paths emitted]
+            ;(println "Depth" (count (first paths)) "emitted" (count emitted))
             (let [[emitted paths] (reduce (fn [[emitted paths] current-path]
                                             (let [emitted-with-current (conj emitted (peek current-path))]
                                               [emitted-with-current
@@ -421,10 +438,36 @@
   (time (count-steps-to-get-everything-to-top-floor puzzle-input))
   )
 
-(defn solve-part-2
-  {:test #(is (= "FIXME" (solve-part-2)))}
-  []
-  "FIXME")
 
-;(println "Part 1:" (solve-part-1))
-;(println "Part 2:" (solve-part-2))
+(def part-2-input
+  (make-layout 0
+               [; The first floor contains a strontium generator, a strontium-compatible microchip, a
+                ; plutonium generator, and a plutonium-compatible microchip.
+                (mk-floor :strontium :generator
+                          :strontium :chip
+                          :plutonium :generator
+                          :plutonium :chip
+                          :elerium :generator
+                          :elerium :chip
+                          :dilithium :generator
+                          :dilithium :chip)
+                ; The second floor contains a thulium generator, a ruthenium generator, a ruthenium-compatible
+                ; microchip, a curium generator, and a curium-compatible microchip.
+                (mk-floor :thulium :generator
+                          :ruthenium :generator
+                          :ruthenium :chip
+                          :curium :generator
+                          :curium :chip)
+                ; The third floor contains a thulium-compatible microchip.
+                (mk-floor :thulium :chip)
+                ; The fourth floor contains nothing relevant.
+                empty-floor
+                ]
+               ))
+
+(defn solve-part-2
+  {:test #(is (= 61 (solve-part-2)))}
+  []
+  (println "Solving part 2...")
+  (time (count-steps-to-get-everything-to-top-floor part-2-input))
+  )
