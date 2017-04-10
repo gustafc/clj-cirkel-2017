@@ -46,7 +46,7 @@
 ;
 
 
-(ns advent-12
+(ns clj_cirkel_2017.hacking.advent.day12-leomono
   (:use clojure.test)
   (:require [clojure.string :as strings])
   (:require [clojure.set :as sets]))

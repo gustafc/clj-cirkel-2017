@@ -54,7 +54,7 @@
 ;
 ; Your puzzle input is still ojvtpuvg.
 
-(ns advent-05
+(ns clj_cirkel_2017.hacking.advent.day05-how-about-a-nice-game-of-chess
   (:use clojure.test)
   (:import (java.security MessageDigest))
   (:require [clojure.string :as strings]))

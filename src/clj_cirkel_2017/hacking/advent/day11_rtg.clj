@@ -159,7 +159,7 @@
 ;
 
 
-(ns advent-11
+(ns clj_cirkel_2017.hacking.advent.day11-rtg
   (:use clojure.test)
   (:require [clojure.string :as strings])
   (:require [clojure.set :as sets]))

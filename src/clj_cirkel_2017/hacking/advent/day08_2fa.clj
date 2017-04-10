@@ -55,7 +55,7 @@
 ; did work, how many pixels should be lit?
 ;
 
-(ns advent-08
+(ns clj_cirkel_2017.hacking.advent.day08-2fa
   (:use clojure.test)
   (:require [clojure.string :as strings]))
 

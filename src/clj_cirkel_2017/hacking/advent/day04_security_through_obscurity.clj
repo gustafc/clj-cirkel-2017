@@ -39,7 +39,7 @@
 ; What is the sector ID of the room where North Pole objects are stored?
 ;
 
-(ns advent-04
+(ns clj_cirkel_2017.hacking.advent.day04-security-through-obscurity
   (:use clojure.test)
   (:require [clojure.string :as strings]))
 
@@ -113,7 +113,7 @@
             (is (= "very encrypted name" (decrypt-room-name (parse-room "qzmt-zixmtkozy-ivhz-343[zimth]"))))
             )}
   [{:keys [encrypted-name sector-id]}]
-  (join (map (fn [ch] (if (= \- ch) \space
+  (strings/join (map (fn [ch] (if (= \- ch) \space
                               (rot-char ch sector-id)))
        encrypted-name)))
 

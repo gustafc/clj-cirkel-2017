@@ -64,7 +64,7 @@
 ;
 ; Using the same instructions in your puzzle input, what is the correct bathroom code?
 
-(ns advent-02
+(ns clj_cirkel_2017.hacking.advent.day02-bathroom-security
   (:use clojure.test))
 
 (defn index-of

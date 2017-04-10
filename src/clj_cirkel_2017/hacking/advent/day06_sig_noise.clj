@@ -46,7 +46,7 @@
 ; trying to send?
 ;
 
-(ns advent-06
+(ns clj_cirkel_2017.hacking.advent.day06-sig-noise
   (:use clojure.test)
   (:require [clojure.string :as strings]))
 

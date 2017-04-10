@@ -55,7 +55,7 @@
 ; What is the decompressed length of the file using this improved format?
 ;
 
-(ns advent-09
+(ns clj_cirkel_2017.hacking.advent.day09-explosions
   (:use clojure.test)
   (:require [clojure.string :as strings]))
 

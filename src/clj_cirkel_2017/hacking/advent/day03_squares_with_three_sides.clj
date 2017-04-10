@@ -33,7 +33,7 @@
 
 
 
-(ns advent-03
+(ns clj_cirkel_2017.hacking.advent.day03-squares-with-three-sides
   (:use clojure.test))
 
 (defn possible-triangle?

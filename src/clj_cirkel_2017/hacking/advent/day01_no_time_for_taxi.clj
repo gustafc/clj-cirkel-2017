@@ -35,7 +35,7 @@
 ; How many blocks away is the first location you visit twice?
 
 
-(ns advent-01
+(ns clj_cirkel_2017.hacking.advent.day01-no-time-for-taxi
   (:use clojure.test))
 
 (def N :north)

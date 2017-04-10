@@ -43,7 +43,7 @@
 
 
 
-(ns advent-10
+(ns clj_cirkel_2017.hacking.advent.day10-balance
   (:use clojure.test)
   (:require [clojure.set :as sets])
   (:require [clojure.string :as strings]))

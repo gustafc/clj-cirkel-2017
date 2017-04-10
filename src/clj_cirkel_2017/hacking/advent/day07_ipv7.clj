@@ -41,7 +41,7 @@
 ; How many IPs in your puzzle input support SSL?
 ;
 
-(ns advent-07
+(ns clj_cirkel_2017.hacking.advent.day07-ipv7
   (:use clojure.test)
   (:require [clojure.string :as strings]))
 
