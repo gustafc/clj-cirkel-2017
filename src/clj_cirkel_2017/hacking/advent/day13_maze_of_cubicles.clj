@@ -69,6 +69,8 @@
       (recur (unsigned-bit-shift-right n 1) (+ set-bits (bit-and n 1))))
     ))
 
+(def example-magic 10)
+
 (defn open-space?
   {:test #(is (= [".#.####.##"
                   "..#..#...#"
@@ -80,7 +82,7 @@
                  (->> (range 7)
                       (map (fn [y] (->> (range 10)
                                         (map (fn [x]
-                                               (if (open-space? 10 x y)
+                                               (if (open-space? example-magic x y)
                                                  \.
                                                  \#)))
                                         (apply str))))
@@ -100,7 +102,7 @@
 
 
 (defn traversible-neighbours-for-magic
-  {:test #(let [example-neigbhours (comp set (traversible-neighbours-for-magic 10))]
+  {:test #(let [example-neigbhours (comp set (traversible-neighbours-for-magic example-magic))]
             (is (= #{[0 1]} (example-neigbhours [0 0])))
             (is (= #{[0 0] [1 1]} (example-neigbhours [0 1])))
             (is (= #{[6 4]
@@ -119,22 +121,44 @@
            (filter traversible-coordinate?)
            ))))
 
+(defn find-paths-from
+  {:test #(do (is (= #{[0 0] [0 1] [1 1]}
+                     (->> (find-paths-from example-magic [0 1])
+                          (take 3)
+                          (map peek)
+                          (set)))))}
+  [magic-n start-coord]
+  (->> (comp (traversible-neighbours-for-magic magic-n) peek)
+       (clj_cirkel_2017.hacking.advent.day11-rtg/traverse-breadth-first start-coord)))
+
 (defn find-path
   {:test #(do
-            (is (= [[0 0] [0 1] [1 1]] (find-path 10 [0 0] [1 1])))
-            (is (= 12 (count (find-path 10 [1 1] [7 4]))))
+            (is (= [[0 0] [0 1] [1 1]] (find-path example-magic [0 0] [1 1])))
+            (is (= 12 (count (find-path example-magic [1 1] [7 4]))))
             )}
   [magic-n start-coord end-coord]
-  (->> (comp (traversible-neighbours-for-magic magic-n) peek)
-       (clj_cirkel_2017.hacking.advent.day11-rtg/traverse-breadth-first start-coord)
+  (->> (find-paths-from magic-n start-coord)
        (filter #(= (peek %) end-coord))
-       (first))
-  )
+       (first)))
+
+(defn coords-within-steps
+  {:test #(do
+            (is (= #{[0 0] [0 1] [1 1]}
+                   (coords-within-steps example-magic [0 1] 1))))}
+  [magic-n start-coord steps]
+  (->> (find-paths-from magic-n start-coord)
+       (take-while #(<= (count %) (inc steps)))
+       (reduce into #{})
+       ))
 
 (def puzzle-magic 1364)
 
 (defn solve-part-1
   {:test #(is (= 86 (dec (count (solve-part-1)))))}
   []
-  (find-path puzzle-magic [1 1] [31 39])
-  )
+  (find-path puzzle-magic [1 1] [31 39]))
+
+(defn solve-part-2
+  {:test #(is (= 127 (count (solve-part-2))))}
+  []
+  (coords-within-steps puzzle-magic [1 1] 50))
