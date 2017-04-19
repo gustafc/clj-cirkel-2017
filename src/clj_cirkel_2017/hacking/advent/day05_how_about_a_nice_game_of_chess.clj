@@ -141,5 +141,5 @@
   []
   (crack-door-password-v2 "ojvtpuvg"))
 
-(prn "Part 1: " (solve-part-1))
-(prn "Part 2: " (solve-part-2))
+; (prn "Part 1: " (solve-part-1))
+; (prn "Part 2: " (solve-part-2))
