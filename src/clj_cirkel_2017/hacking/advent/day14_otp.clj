@@ -45,6 +45,39 @@
 ; one-time pad key?
 ;
 ; Your puzzle input is yjdafjpo.
+;
+; --- Part Two ---
+;
+; Of course, in order to make this process even more secure, you've also implemented key stretching.
+;
+; Key stretching forces attackers to spend more time generating hashes. Unfortunately, it forces everyone else to spend
+; more time, too.
+;
+; To implement key stretching, whenever you generate a hash, before you use it, you first find the MD5 hash of that
+; hash, then the MD5 hash of that hash, and so on, a total of 2016 additional hashings. Always use lowercase hexadecimal
+; representations of hashes.
+;
+; For example, to find the stretched hash for index 0 and salt abc:
+;
+;     Find the MD5 hash of abc0: 577571be4de9dcce85a041ba0410f29f.
+;     Then, find the MD5 hash of that hash: eec80a0c92dc8a0777c619d9bb51e910.
+;     Then, find the MD5 hash of that hash: 16062ce768787384c81fe17a7a60c7e3.
+;     ...repeat many times...
+;     Then, find the MD5 hash of that hash: a107ff634856bb300138cac6568c0f24.
+;
+; So, the stretched hash for index 0 in this situation is a107ff.... In the end, you find the original hash (one use of
+; MD5), then find the hash-of-the-previous-hash 2016 times, for a total of 2017 uses of MD5.
+;
+; The rest of the process remains the same, but now the keys are entirely different. Again for salt abc:
+;
+;     The first triple (222, at index 5) has no matching 22222 in the next thousand hashes.
+;     The second triple (eee, at index 10) hash a matching eeeee at index 89, and so it is the first key.
+;     Eventually, index 22551 produces the 64th key (triple fff with matching fffff at index 22859.
+;
+; Given the actual salt in your puzzle input and using 2016 extra MD5 calls of key stretching, what index now produces
+; your 64th one-time pad key?
+;
+; Your puzzle input is still yjdafjpo.
 
 
 (ns clj_cirkel_2017.hacking.advent.day14-otp
@@ -53,46 +86,69 @@
 
 (defn first-triple
   {:test #(do
-      (is (= nil (first-triple "apelsin")))
-      (is (= "aaa" (first-triple "aaapelsiiin")))
-    )}
+            (is (= nil (first-triple "apelsin")))
+            (is (= "aaa" (first-triple "aaapelsiiin")))
+            )}
   [s]
   (->> (re-seq #"(.)\1\1" s)
        (first)
        (first)))
 
+(def md5hex (comp day05/format-md5 day05/md5))
+
+(defn md5-stream
+  {:test #(do
+            (is (= (md5hex "abc0") (first (md5-stream "abc"))))
+            (is (= "a107ff634856bb300138cac6568c0f24" (first (md5-stream 2016 "abc"))))
+            )}
+  ([salt] (md5-stream 0 salt))
+  ([stretches salt]
+   (->> (day05/md5s-with-trailing-index salt)
+        (pmap #(let [h (day05/format-md5 %)]
+                 (->> (iterate md5hex h)
+                      (drop stretches)
+                      (first))
+                 ))
+        )))
+
+(def unstretched-md5-stream-of-abc (md5-stream "abc"))
+
 (defn generate-otps
   {:test #(do
-      ;(is (= [39] (take 1 (generate-otps "abc"))))
-      (is (= [39 92] (take 2 (generate-otps "abc"))))
-    )}
-  [salt]
-  (->> (day05/md5s-with-trailing-index salt)
-       (map day05/format-md5)
+            (is (= [39 92] (take 2 (generate-otps unstretched-md5-stream-of-abc))))
+            )}
+  [hash-stream]
+  (->> hash-stream
        (iterate rest)
        (map vector (range))
        (filter (fn [[idx [hash & hashes]]]
-         (let [triple (first-triple hash)
-               quintuple (str triple (first triple) (first triple))]
-           (and triple
-                (->> (take 1000 hashes)
-                     (some #(clojure.string/includes? %1 quintuple))))
-         )))
+                 (let [triple (first-triple hash)
+                       quintuple (str triple (first triple) (first triple))]
+                   (when triple
+                     (->> (take 1000 hashes)
+                          (some #(clojure.string/includes? %1 quintuple))))
+                   )))
        (map first)
-    ))
+       ))
 
 (defn index-of-64th-key
   {:test #(do
-      (is (= 22728 (index-of-64th-key "abc")))
-    )}
-  [salt]
-  (->> (generate-otps salt)
+            (is (= 22728 (index-of-64th-key unstretched-md5-stream-of-abc)))
+            )}
+  [hash-stream]
+  (->> (generate-otps hash-stream)
        (take 64)
+       (map-indexed #(or (println "Got" %1 %2) %2))
        (last)))
 
 (def puzzle-input "yjdafjpo")
 
 (defn solve-part-1
- {:test #(is (= 25427 (solve-part-1)))}
- []
- (index-of-64th-key puzzle-input))
+  {:test #(is (= 25427 (solve-part-1)))}
+  []
+  (index-of-64th-key (md5-stream puzzle-input)))
+
+(defn solve-part-2
+  {:test #(is (= 22045 (solve-part-2)))}
+  []
+  (time (index-of-64th-key (md5-stream 2016 puzzle-input))))
