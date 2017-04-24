@@ -81,7 +81,8 @@
 
 
 (ns clj_cirkel_2017.hacking.advent.day14-otp
-  (:use clojure.test)
+  (:use [clojure.test :only [is]])
+  (:use [clj_cirkel_2017.ch08.debugging  :only [printvars]])
   (:require [clj_cirkel_2017.hacking.advent.day05-how-about-a-nice-game-of-chess :as day05]))
 
 (defn first-triple
@@ -138,7 +139,7 @@
   [hash-stream]
   (->> (generate-otps hash-stream)
        (take 64)
-       (map-indexed #(or (println "Got" %1 %2) %2))
+       (map-indexed (fn [index otp] (printvars index otp)))
        (last)))
 
 (def puzzle-input "yjdafjpo")
