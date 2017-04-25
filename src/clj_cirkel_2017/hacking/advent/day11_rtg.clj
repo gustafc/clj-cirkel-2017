@@ -199,6 +199,36 @@
     :first-occupied-floor first-occupied-floor})
   )
 
+(defn simplify-layout
+  {:test #(do
+            (is (= [[-1 0]] (simplify-layout (make-layout 0 []))))
+            (is (= [[-1 0] [0 0]] (simplify-layout (make-layout 0 [(mk-floor :hydrogen :generator
+                                                                             :hydrogen :chip)]))))
+            (is (= [[-1 0] [0 0] [1 1]] (simplify-layout (make-layout 0 [(mk-floor :hydrogen :generator
+                                                                                   :hydrogen :chip)
+                                                                         (mk-floor :lithium :generator
+                                                                                   :lithium :chip)]))))
+            (is (= [[-1 0] [0 1] [0 1]] (simplify-layout (make-layout 0 [(mk-floor :hydrogen :generator
+                                                                                   :lithium :generator)
+                                                                         (mk-floor :hydrogen :chip
+                                                                                   :lithium :chip)]))))
+            )}
+  [layout]
+  (concat [[-1 (layout :on-floor)]]
+          (->> (layout :floors)
+               (mapcat identity)
+               (map first)
+               (distinct)
+               (map (fn [substance]
+                      (->> (layout :floors)
+                           (map-indexed vector)
+                           (reduce (fn [[generator-pos chip-pos] [floor-no items]]
+                                     [(if (contains? items [substance :generator]) floor-no generator-pos)
+                                      (if (contains? items [substance :chip]) floor-no chip-pos)])
+                                   [nil nil])
+                           )))
+               )))
+
 (defn parse-example-layout
   {:test #(do (is (= {:on-floor             0
                       :first-occupied-floor 0
@@ -354,36 +384,45 @@
   )
 
 (defn traverse-breadth-first
-  {:test #(letfn [(successors [path] (map (partial str (peek path)) ["a" "b" "a"]))]
-            (is (= [[""]] (take 1 (traverse-breadth-first "" successors))))
+  {:test #(letfn [(successors-by [& succs] (fn [path] (map (partial str (peek path)) succs)))]
+            (is (= [[""]] (take 1 (traverse-breadth-first "" (successors-by "a" "b")))))
             (is (= [[""] ["" "a"] ["" "b"]]
-                   (take 3 (traverse-breadth-first "" successors))))
+                   (take 3 (traverse-breadth-first "" (successors-by "a" "b")))))
             (is (= [[""]
                     ["" "a"] ["" "b"]
                     ["" "a" "aa"] ["" "a" "ab"]
                     ["" "b" "ba"] ["" "b" "bb"]
                     ]
-                   (take 7 (traverse-breadth-first "" successors))))
+                   (take 7 (traverse-breadth-first "" (successors-by "a" "b" "a")))))
+            (is (= [[""]
+                    ["" "a"]
+                    ["" "a" "aa"]
+                    ["" "a" "aa" "aaa"]]
+                   (take 4 (traverse-breadth-first "" (successors-by "a" "A") strings/upper-case))
+                   ))
+
             )}
-  [initial-state get-successors]
-  (letfn [(generate [paths emitted]
-            ;(println "Depth" (count (first paths)) "emitted" (count emitted))
-            (let [[emitted paths] (reduce (fn [[emitted paths] current-path]
-                                            (let [emitted-with-current (conj emitted (peek current-path))]
-                                              [emitted-with-current
-                                               (if (identical? emitted emitted-with-current)
-                                                 paths
-                                                 (conj paths current-path)
-                                                 )]
-                                              )) [emitted []] paths)]
-              (lazy-cat paths
-                        (generate (mapcat (fn [path]
-                                            (map #(conj path %) (get-successors path)))
-                                          paths)
-                                  emitted)))
-            )]
-    (generate [[initial-state]] #{})
-    ))
+  ([initial-state get-successors] (traverse-breadth-first initial-state get-successors identity))
+  ([initial-state get-successors simplify-state]
+   (letfn [(generate [paths emitted]
+             ;(println "Depth" (count (first paths)) "emitted" (count emitted))
+             (let [[emitted paths] (reduce (fn [[emitted paths] current-path]
+                                             (let [emitted-with-current (conj emitted (simplify-state (peek current-path)))]
+                                               [emitted-with-current
+                                                (if (identical? emitted emitted-with-current)
+                                                  paths
+                                                  (conj paths current-path)
+                                                  )]
+                                               )) [emitted []] paths)]
+               (lazy-cat paths
+                         (generate (mapcat (fn [path]
+                                             (map #(conj path %) (get-successors path)))
+                                           paths)
+                                   emitted)))
+             )]
+     (generate [[initial-state]] #{})
+     ))
+  )
 
 (defn everything-on-top-floor?
   {:test #(do
@@ -401,7 +440,7 @@
             (is (= 11 (time (count-steps-to-get-everything-to-top-floor (first example-layouts)))))
             )}
   [first-layout]
-  (->> (traverse-breadth-first first-layout successive-layouts-to-path)
+  (->> (traverse-breadth-first first-layout successive-layouts-to-path simplify-layout)
        (filter (comp everything-on-top-floor? peek))
        (first)
        (count)
