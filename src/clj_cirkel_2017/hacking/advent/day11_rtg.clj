@@ -212,6 +212,14 @@
                                                                                    :lithium :generator)
                                                                          (mk-floor :hydrogen :chip
                                                                                    :lithium :chip)]))))
+            (is (= [[-1 0] [0 0] [1 0] [1 0]]
+                   (simplify-layout (make-layout 0 [(mk-floor :a :chip
+                                                              :z :chip
+                                                              :b :generator
+                                                              :b :chip)
+                                                    (mk-floor :z :generator
+                                                              :a :generator)])))
+                "Should sort the result so that generators on lower floors appear before those on upper floors")
             )}
   [layout]
   (concat [[-1 (layout :on-floor)]]
@@ -227,6 +235,7 @@
                                       (if (contains? items [substance :chip]) floor-no chip-pos)])
                                    [nil nil])
                            )))
+               (sort)
                )))
 
 (defn parse-example-layout
