@@ -3,8 +3,6 @@
 
 (defmacro form-and-value [f] `['~f ~f])
 
-(defn bajs [] "💩")
-
 (defmacro printvars
   "Prints a caption, a list of forms with their computed values, and returns the first value without recomputing it."
   [caption value & others]
