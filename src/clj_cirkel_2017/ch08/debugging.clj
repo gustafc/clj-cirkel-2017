@@ -9,7 +9,9 @@
   (let [vars (concat `['~value ~value]
                       (mapcat (fn [v] `['~v ~v]) others)
                       )]
-    `(let  [~'to-print [~caption ~@vars]]
-       (apply prn ~'to-print)
-       (nth ~'to-print 2))))
+    `(let  [to-print# [~caption ~@vars]]
+       (apply prn to-print#)
+       (nth to-print# 2))))
 
+
+;(let [to-print "banenaner"] (printvars "Frukt:" (println "apelsin") to-print))
