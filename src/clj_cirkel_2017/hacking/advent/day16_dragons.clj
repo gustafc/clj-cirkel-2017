@@ -67,7 +67,8 @@
 ; Your puzzle input is 01000100010010111.
 
 (ns clj-cirkel-2017.hacking.advent.day16-dragons
-  (:use [clojure.test :refer [is]]))
+  (:use [clojure.test :refer [is]])
+  (:use [clj_cirkel_2017.ch08.debugging :refer [printvars]]))
 
 (defn parse-bits
   {:test #(is (= [false false true false] (parse-bits "0010")))}
@@ -97,26 +98,39 @@
             (is (= "10000011110010000111110" (generate-bit-str "10000" 23)))
             )}
   [bits size]
-  (take size (loop [bits bits]
-               (if (<= size (count bits))
+  (take size (loop [bits bits
+                    generated (count bits)]
+               (if (<= size generated)
                  bits
-                 (recur (concat bits [false] (map not (reverse bits)))))
-               ))
-  )
+                 (recur (lazy-cat bits [false] (map not (reverse bits))) (inc (* 2 generated))))
+               )))
+
+
 
 (defn calculate-checksum
   {:test #(do
             (is (= "100" (render-bits (calculate-checksum (parse-bits "110010110100")))))
             )}
   [bits]
-  (letfn [(partial-checksum [bits] (->> bits
-                                        (partition 2)
-                                        (map (partial apply =))
-                                        ))]
-    (->> (iterate partial-checksum bits)
-         (drop-while #(= 0 (mod (count %) 2)))
-         (first)
-         )))
+  (let [nbits (count bits)
+        output-bits (loop [nbits nbits]
+                      (if (= 1 (mod nbits 2))
+                        nbits
+                        (recur (/ nbits 2))))
+        partition-size (/ nbits output-bits)
+        do-checksum (fn [bits] (if (= 1 (count bits))
+                                 (first bits)
+                                 (->> bits
+                                      (partition 2)
+                                      (map (partial apply =))
+                                      (recur)
+                                      )))]
+    (if (= output-bits nbits)
+      bits
+      (->> bits
+           (partition partition-size)
+           (map do-checksum)
+           ))))
 
 (defn checksum-from-seed
   {:test #(is (= "01100" (checksum-from-seed "10000" 20)))}
@@ -132,4 +146,11 @@
   {:test #(is (= "10010010110011010" (solve-part-1)))}
   []
   (checksum-from-seed puzzle-input 272)
+  )
+
+(defn solve-part-2
+  {:test #(is (= "01010100101011100" (solve-part-2)))}
+  []
+  (println "Starting part 2...")
+  (time (checksum-from-seed puzzle-input 35651584))
   )
