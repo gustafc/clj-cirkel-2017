@@ -409,6 +409,17 @@
                     ["" "a" "aa" "aaa"]]
                    (take 4 (traverse-breadth-first "" (successors-by "a" "A") strings/upper-case))
                    ))
+            (is (= [[""]
+                    ["" "x"]
+                    ["" "x" "xx"]
+                    ["" "x" "xx" "xxx"]]
+                   (take 10 (traverse-breadth-first "" (fn [path]
+                                                        (if (= 4 (count path))
+                                                          []
+                                                          [(str (last path) "x")]))))
+                   )
+                "It aborts when no new paths are found"
+                )
 
             )}
   ([initial-state get-successors] (traverse-breadth-first initial-state get-successors identity))
@@ -423,11 +434,13 @@
                                                   (conj paths current-path)
                                                   )]
                                                )) [emitted []] paths)]
-               (lazy-cat paths
-                         (generate (mapcat (fn [path]
-                                             (map #(conj path %) (get-successors path)))
-                                           paths)
-                                   emitted)))
+               (if (= 0 (count paths))
+                 []
+                 (lazy-cat paths
+                           (generate (mapcat (fn [path]
+                                               (map #(conj path %) (get-successors path)))
+                                             paths)
+                                     emitted))))
              )]
      (generate [[initial-state]] #{})
      ))
