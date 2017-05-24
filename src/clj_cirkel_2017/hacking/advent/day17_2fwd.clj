@@ -49,6 +49,19 @@
 ; Given your vault's passcode, what is the shortest path (the actual path, not just the length) to reach the vault?
 ;
 ; Your puzzle input is pxxbnzuo.
+; --- Part Two ---
+;
+; You're curious how robust this security solution really is, and so you decide to find longer and longer paths which still provide access to the vault. You remember that paths always end the first time they reach the bottom-right room (that is, they can never pass through it, only end in it).
+;
+; For example:
+;
+; If your passcode were ihgpwlah, the longest path would take 370 steps.
+; With kglvqrro, the longest path would be 492 steps long.
+; With ulqzkmiv, the longest path would be 830 steps long.
+;
+; What is the length of the longest path that reaches the vault?
+
+
 (ns clj-cirkel-2017.hacking.advent.day17-2fwd
   (:use [clojure.test :refer [is]])
   (:use [clj_cirkel_2017.hacking.advent.day05-how-about-a-nice-game-of-chess :refer [md5 format-md5]])
@@ -110,29 +123,6 @@
          (< -1 y height))
     ))
 
-(defn paths-after-path
-  {:test #(do
-            (is (= ["D"] (paths-after-path example-board "")))
-            (is (= ["DU" "DR"] (paths-after-path example-board "D")))
-            (is (= [] (paths-after-path example-board "DR")))
-            (is (= ["DUR"] (paths-after-path example-board "DU")))
-            (is (= [] (paths-after-path example-board "DUR")))
-            )}
-  [board path]
-  (->> (unlocked-doors board path)
-       (map (partial str path))
-       (filter (partial on-board? board))
-       ))
-
-(defn walk-board
-  {:test #(is (= '(
-                    ""
-                    "D"
-                    "DU" "DR"
-                    "DUR") (walk-board example-board)))}
-  [board]
-  (traverse-breadth-first "" #(paths-after-path board (peek %))))
-
 (defn is-at-end?
   {:test #(do
             (is (= false (is-at-end? example-board "")))
@@ -145,6 +135,32 @@
   (= [(dec width) (dec height)] (path->coord path))
   )
 
+(defn paths-after-path
+  {:test #(do
+            (is (= ["D"] (paths-after-path example-board "")))
+            (is (= ["DU" "DR"] (paths-after-path example-board "D")))
+            (is (= [] (paths-after-path example-board "DR")))
+            (is (= ["DUR"] (paths-after-path example-board "DU")))
+            (is (= [] (paths-after-path example-board "DUR")))
+            (is (= [] (paths-after-path example-board "DDDRRRLRLR")))
+            )}
+  [board path]
+  (if (is-at-end? board path)
+    []
+    (->> (unlocked-doors board path)
+         (map (partial str path))
+         (filter (partial on-board? board))
+         )))
+
+(defn walk-board
+  {:test #(is (= '(
+                    ""
+                    "D"
+                    "DU" "DR"
+                    "DUR") (walk-board example-board)))}
+  [board]
+  (map last (traverse-breadth-first "" #(paths-after-path board (peek %)))))
+
 (defn shortest-path-to-end
   {:test #(do
             ;     If your passcode were ihgpwlah, the shortest path would be DDRRRD.
@@ -156,9 +172,25 @@
             )}
   [board]
   (->> (walk-board board)
-       (map last)
        (filter (partial is-at-end? board))
        (first)
+       ))
+
+
+(defn length-of-longest-path-to-end
+  {:test #(do
+            ;     If your passcode were ihgpwlah, the shortest path would be DDRRRD.
+            (is (= 370 (length-of-longest-path-to-end (assoc example-board :magic "ihgpwlah"))))
+            ;     With kglvqrro, the shortest path would be DDUDRLRRUDRD.
+            (is (= 492 (length-of-longest-path-to-end (assoc example-board :magic "kglvqrro"))))
+            ;     With ulqzkmiv, the shortest would be DRURDRUDDLLDLUURRDULRLDUUDDDRR.
+            (is (= 830 (length-of-longest-path-to-end (assoc example-board :magic "ulqzkmiv"))))
+            )}
+  [board]
+  (->> (walk-board board)
+       (filter (partial is-at-end? board))
+       (last)
+       (count)
        ))
 
 (def puzzle-board {:magic "pxxbnzuo" :width 4 :height 4})
@@ -167,3 +199,8 @@
   {:test #(is (= "RDULRDDRRD" (solve-part-1)))}
   []
   (shortest-path-to-end puzzle-board))
+
+(defn solve-part-2
+  {:test #(is (= 752 (solve-part-2)))}
+  []
+  (length-of-longest-path-to-end puzzle-board))
