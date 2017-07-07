@@ -70,6 +70,10 @@
 ; Starting with the map in your puzzle input, in a total of 40 rows (including the starting row), how many safe tiles
 ; are there?
 ;
+; --- Part Two ---
+;
+; How many safe tiles are there in a total of 400000 rows?
+;
 
 (ns clj-cirkel-2017.hacking.advent.day18-like-a-rogue
   (:use [clojure.test :refer [is]])
@@ -149,4 +153,10 @@
   {:test #(is (= 1956 (solve-part-1)))}
   []
   (count-safe-tiles-in-rows (take 40 (generate-rows (parse-row puzzle-input))))
+  )
+
+(defn solve-part-2
+  {:test #(is (= 19995121 (solve-part-2)))}
+  []
+  (count-safe-tiles-in-rows (take 400000 (generate-rows (parse-row puzzle-input))))
   )
